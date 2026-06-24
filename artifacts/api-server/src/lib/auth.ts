@@ -1,0 +1,25 @@
+import crypto from "crypto";
+
+export function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password + "sanad_salt_2024").digest("hex");
+}
+
+export function verifyPassword(password: string, hash: string): boolean {
+  return hashPassword(password) === hash;
+}
+
+export function generateToken(userId: number): string {
+  const payload = `${userId}:${Date.now()}:sanad_secret_2024`;
+  return Buffer.from(payload).toString("base64url");
+}
+
+export function verifyToken(token: string): number | null {
+  try {
+    const decoded = Buffer.from(token, "base64url").toString("utf-8");
+    const [userId] = decoded.split(":");
+    const id = parseInt(userId, 10);
+    return isNaN(id) ? null : id;
+  } catch {
+    return null;
+  }
+}

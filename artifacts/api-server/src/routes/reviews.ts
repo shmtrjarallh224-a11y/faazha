@@ -1,0 +1,75 @@
+import { Router, type IRouter } from "express";
+import { db, reviewsTable, usersTable, providersTable } from "@workspace/db";
+import { eq, avg, count, desc } from "drizzle-orm";
+import { requireAuth, type AuthRequest } from "../middlewares/auth";
+import { CreateReviewBody, GetProviderReviewsParams } from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+router.get("/providers/:id/reviews", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const reviews = await db
+    .select({ r: reviewsTable, u: usersTable })
+    .from(reviewsTable)
+    .innerJoin(usersTable, eq(reviewsTable.clientId, usersTable.id))
+    .where(eq(reviewsTable.providerId, id))
+    .orderBy(desc(reviewsTable.createdAt));
+
+  res.json(reviews.map(({ r, u }) => ({
+    id: r.id,
+    clientId: r.clientId,
+    clientName: u.name,
+    clientAvatarUrl: u.avatarUrl ?? null,
+    providerId: r.providerId,
+    requestId: r.requestId ?? null,
+    rating: r.rating,
+    comment: r.comment ?? null,
+    createdAt: r.createdAt.toISOString(),
+  })));
+});
+
+router.post("/reviews", requireAuth, async (req: AuthRequest, res): Promise<void> => {
+  const parsed = CreateReviewBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [review] = await db.insert(reviewsTable).values({
+    clientId: req.userId!,
+    providerId: parsed.data.providerId,
+    requestId: parsed.data.requestId ?? null,
+    rating: parsed.data.rating,
+    comment: parsed.data.comment ?? null,
+  }).returning();
+
+  // Recalculate provider rating
+  const [stats] = await db
+    .select({ avgRating: avg(reviewsTable.rating), cnt: count(reviewsTable.id) })
+    .from(reviewsTable)
+    .where(eq(reviewsTable.providerId, parsed.data.providerId));
+
+  await db
+    .update(providersTable)
+    .set({
+      rating: stats.avgRating ? String(parseFloat(String(stats.avgRating)).toFixed(2)) : "0",
+      reviewCount: Number(stats.cnt),
+    })
+    .where(eq(providersTable.id, parsed.data.providerId));
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+
+  res.status(201).json({
+    id: review.id,
+    clientId: review.clientId,
+    clientName: user?.name ?? "",
+    clientAvatarUrl: user?.avatarUrl ?? null,
+    providerId: review.providerId,
+    requestId: review.requestId ?? null,
+    rating: review.rating,
+    comment: review.comment ?? null,
+    createdAt: review.createdAt.toISOString(),
+  });
+});
+
+export default router;

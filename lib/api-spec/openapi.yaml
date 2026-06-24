@@ -1,22 +1,41 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: سند – منصة الخدمات والمهنيين في اليمن
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: providers
+    description: Service providers
+  - name: categories
+    description: Service categories
+  - name: requests
+    description: Service requests
+  - name: reviews
+    description: Reviews and ratings
+  - name: favorites
+    description: Favorite providers
+  - name: messages
+    description: Messaging
+  - name: notifications
+    description: Notifications
+  - name: admin
+    description: Admin operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +43,1286 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── AUTH ────────────────────────────────────────────────────────────────────
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # ─── CATEGORIES ──────────────────────────────────────────────────────────────
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List all service categories
+      responses:
+        "200":
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create category (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  # ─── PROVIDERS ───────────────────────────────────────────────────────────────
+  /providers:
+    get:
+      operationId: listProviders
+      tags: [providers]
+      summary: Search and list service providers
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: city
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: district
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: minRating
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: lat
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: lng
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: sortBy
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: [distance, rating, experience, null]
+        - name: page
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of providers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProvidersPage"
+
+  /providers/{id}:
+    get:
+      operationId: getProvider
+      tags: [providers]
+      summary: Get provider profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderDetail"
+    patch:
+      operationId: updateProvider
+      tags: [providers]
+      summary: Update provider profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderDetail"
+
+  /providers/nearby:
+    get:
+      operationId: getNearbyProviders
+      tags: [providers]
+      summary: Get nearest providers by location
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: radiusKm
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Nearby providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderSummary"
+
+  /providers/top-rated:
+    get:
+      operationId: getTopRatedProviders
+      tags: [providers]
+      summary: Get top rated providers
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Top rated providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderSummary"
+
+  /providers/most-requested:
+    get:
+      operationId: getMostRequestedProviders
+      tags: [providers]
+      summary: Get most requested providers
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Most requested providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderSummary"
+
+  /providers/{id}/portfolio:
+    get:
+      operationId: getProviderPortfolio
+      tags: [providers]
+      summary: Get provider portfolio images
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Portfolio items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PortfolioItem"
+    post:
+      operationId: addPortfolioItem
+      tags: [providers]
+      summary: Add portfolio item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PortfolioInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PortfolioItem"
+
+  # ─── SERVICE REQUESTS ────────────────────────────────────────────────────────
+  /requests:
+    get:
+      operationId: listRequests
+      tags: [requests]
+      summary: List requests (for current user or provider)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: [pending, accepted, rejected, in_progress, completed, cancelled, null]
+        - name: role
+          in: query
+          schema:
+            type: ["string", "null"]
+            enum: [client, provider, null]
+      responses:
+        "200":
+          description: Requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceRequest"
+    post:
+      operationId: createRequest
+      tags: [requests]
+      summary: Create a new service request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceRequestInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+
+  /requests/{id}:
+    get:
+      operationId: getRequest
+      tags: [requests]
+      summary: Get request details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+    patch:
+      operationId: updateRequest
+      tags: [requests]
+      summary: Update request status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceRequestUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequest"
+
+  # ─── REVIEWS ─────────────────────────────────────────────────────────────────
+  /reviews:
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Submit a review for a provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  /providers/{id}/reviews:
+    get:
+      operationId: getProviderReviews
+      tags: [reviews]
+      summary: Get reviews for a provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+
+  # ─── FAVORITES ───────────────────────────────────────────────────────────────
+  /favorites:
+    get:
+      operationId: listFavorites
+      tags: [favorites]
+      summary: List favorited providers
+      responses:
+        "200":
+          description: Favorites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderSummary"
+
+  /favorites/{providerId}:
+    post:
+      operationId: addFavorite
+      tags: [favorites]
+      summary: Add provider to favorites
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteResult"
+    delete:
+      operationId: removeFavorite
+      tags: [favorites]
+      summary: Remove provider from favorites
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FavoriteResult"
+
+  # ─── MESSAGES ────────────────────────────────────────────────────────────────
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [messages]
+      summary: List conversations
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Conversation"
+
+  /conversations/{id}/messages:
+    get:
+      operationId: getMessages
+      tags: [messages]
+      summary: Get messages in a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  # ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: Done
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+
+  # ─── ADMIN ───────────────────────────────────────────────────────────────────
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [admin]
+      summary: Get platform statistics
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: List all users (admin)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: status
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: search
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersPage"
+
+  /admin/users/{id}/status:
+    patch:
+      operationId: updateUserStatus
+      tags: [admin]
+      summary: Update user status (ban/activate)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+
+  /admin/providers/{id}/verify:
+    patch:
+      operationId: verifyProvider
+      tags: [admin]
+      summary: Verify/reject provider account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderVerifyInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+
+  /admin/service-stats:
+    get:
+      operationId: getServiceStats
+      tags: [admin]
+      summary: Get per-category statistics
+      responses:
+        "200":
+          description: Category stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceStat"
+
+  # ─── WOW: HOME FEED ──────────────────────────────────────────────────────────
+  /home-feed:
+    get:
+      operationId: getHomeFeed
+      tags: [providers]
+      summary: Home page aggregated feed
+      parameters:
+        - name: lat
+          in: query
+          schema:
+            type: ["number", "null"]
+        - name: lng
+          in: query
+          schema:
+            type: ["number", "null"]
+      responses:
+        "200":
+          description: Home feed data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeFeed"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ── AUTH ────────────────────────────────────────────────────────────────────
+    RegisterInput:
+      type: object
+      required: [name, phone, password, role]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [client, provider]
+        categoryId:
+          type: ["integer", "null"]
+        city:
+          type: ["string", "null"]
+        district:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        yearsExperience:
+          type: ["integer", "null"]
+        hourlyRate:
+          type: ["number", "null"]
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+
+    LoginInput:
+      type: object
+      required: [phone, password]
+      properties:
+        phone:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required: [id, name, phone, role, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [client, provider, admin]
+        status:
+          type: string
+          enum: [active, pending, banned]
+        avatarUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ── CATEGORY ────────────────────────────────────────────────────────────────
+    Category:
+      type: object
+      required: [id, name, icon, providerCount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        icon:
+          type: string
+        providerCount:
+          type: integer
+
+    CategoryInput:
+      type: object
+      required: [name, icon]
+      properties:
+        name:
+          type: string
+        icon:
+          type: string
+
+    # ── PROVIDER ─────────────────────────────────────────────────────────────────
+    ProviderSummary:
+      type: object
+      required: [id, name, categoryName, city, district, rating, reviewCount, completedJobs, yearsExperience, isVerified, isAvailable]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        categoryName:
+          type: string
+        categoryIcon:
+          type: ["string", "null"]
+        city:
+          type: string
+        district:
+          type: string
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        completedJobs:
+          type: integer
+        yearsExperience:
+          type: integer
+        hourlyRate:
+          type: ["number", "null"]
+        isVerified:
+          type: boolean
+        isAvailable:
+          type: boolean
+        distanceKm:
+          type: ["number", "null"]
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+
+    ProviderDetail:
+      type: object
+      required: [id, name, categoryName, city, district, rating, reviewCount, completedJobs, yearsExperience, isVerified, isAvailable, bio]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        categoryIcon:
+          type: ["string", "null"]
+        city:
+          type: string
+        district:
+          type: string
+        bio:
+          type: string
+        rating:
+          type: number
+        reviewCount:
+          type: integer
+        completedJobs:
+          type: integer
+        yearsExperience:
+          type: integer
+        hourlyRate:
+          type: ["number", "null"]
+        phone:
+          type: ["string", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        isVerified:
+          type: boolean
+        isAvailable:
+          type: boolean
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+        isFavorited:
+          type: boolean
+        createdAt:
+          type: string
+
+    ProviderUpdate:
+      type: object
+      properties:
+        bio:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        district:
+          type: ["string", "null"]
+        yearsExperience:
+          type: ["integer", "null"]
+        hourlyRate:
+          type: ["number", "null"]
+        whatsapp:
+          type: ["string", "null"]
+        isAvailable:
+          type: ["boolean", "null"]
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+
+    ProvidersPage:
+      type: object
+      required: [providers, total, page, limit]
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderSummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    PortfolioItem:
+      type: object
+      required: [id, imageUrl, providerId]
+      properties:
+        id:
+          type: integer
+        imageUrl:
+          type: string
+        description:
+          type: ["string", "null"]
+        providerId:
+          type: integer
+        createdAt:
+          type: string
+
+    PortfolioInput:
+      type: object
+      required: [imageUrl]
+      properties:
+        imageUrl:
+          type: string
+        description:
+          type: ["string", "null"]
+
+    # ── SERVICE REQUEST ──────────────────────────────────────────────────────────
+    ServiceRequest:
+      type: object
+      required: [id, clientId, providerId, status, serviceType, description, city, district, scheduledAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        clientAvatarUrl:
+          type: ["string", "null"]
+        providerId:
+          type: integer
+        providerName:
+          type: string
+        providerAvatarUrl:
+          type: ["string", "null"]
+        providerCategoryName:
+          type: string
+        status:
+          type: string
+          enum: [pending, accepted, rejected, in_progress, completed, cancelled]
+        serviceType:
+          type: string
+        description:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+        scheduledAt:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+        isImmediate:
+          type: boolean
+        createdAt:
+          type: string
+
+    ServiceRequestInput:
+      type: object
+      required: [providerId, serviceType, description, city, district, isImmediate]
+      properties:
+        providerId:
+          type: integer
+        serviceType:
+          type: string
+        description:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+        scheduledAt:
+          type: ["string", "null"]
+        isImmediate:
+          type: boolean
+
+    ServiceRequestUpdate:
+      type: object
+      properties:
+        status:
+          type: ["string", "null"]
+          enum: [accepted, rejected, in_progress, completed, cancelled, null]
+
+    # ── REVIEW ──────────────────────────────────────────────────────────────────
+    Review:
+      type: object
+      required: [id, clientId, providerId, rating, createdAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        clientAvatarUrl:
+          type: ["string", "null"]
+        providerId:
+          type: integer
+        requestId:
+          type: ["integer", "null"]
+        rating:
+          type: integer
+        comment:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    ReviewInput:
+      type: object
+      required: [providerId, rating]
+      properties:
+        providerId:
+          type: integer
+        requestId:
+          type: ["integer", "null"]
+        rating:
+          type: integer
+        comment:
+          type: ["string", "null"]
+
+    # ── FAVORITES ──────────────────────────────────────────────────────────────
+    FavoriteResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    # ── MESSAGE ─────────────────────────────────────────────────────────────────
+    Conversation:
+      type: object
+      required: [id, otherUserId, otherUserName, lastMessage, unreadCount, updatedAt]
+      properties:
+        id:
+          type: integer
+        otherUserId:
+          type: integer
+        otherUserName:
+          type: string
+        otherUserAvatarUrl:
+          type: ["string", "null"]
+        lastMessage:
+          type: ["string", "null"]
+        unreadCount:
+          type: integer
+        updatedAt:
+          type: string
+
+    Message:
+      type: object
+      required: [id, conversationId, senderId, content, createdAt]
+      properties:
+        id:
+          type: integer
+        conversationId:
+          type: integer
+        senderId:
+          type: integer
+        senderName:
+          type: string
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+
+    MessageInput:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+
+    # ── NOTIFICATION ─────────────────────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, userId, type, title, body, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [new_request, request_accepted, request_rejected, provider_arrived, service_completed, new_message, new_offer]
+        title:
+          type: string
+        body:
+          type: string
+        isRead:
+          type: boolean
+        relatedId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    SuccessResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: ["string", "null"]
+
+    # ── ADMIN ───────────────────────────────────────────────────────────────────
+    AdminStats:
+      type: object
+      required: [totalUsers, totalProviders, totalClients, totalRequests, completedRequests, pendingProviders, activeToday]
+      properties:
+        totalUsers:
+          type: integer
+        totalProviders:
+          type: integer
+        totalClients:
+          type: integer
+        totalRequests:
+          type: integer
+        completedRequests:
+          type: integer
+        pendingProviders:
+          type: integer
+        activeToday:
+          type: integer
+        requestsThisWeek:
+          type: integer
+        requestsThisMonth:
+          type: integer
+
+    AdminUsersPage:
+      type: object
+      required: [users, total, page]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUser"
+        total:
+          type: integer
+        page:
+          type: integer
+
+    AdminUser:
+      type: object
+      required: [id, name, phone, role, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        status:
+          type: string
+        avatarUrl:
+          type: ["string", "null"]
+        categoryName:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        rating:
+          type: ["number", "null"]
+        completedJobs:
+          type: ["integer", "null"]
+        isVerified:
+          type: ["boolean", "null"]
+        createdAt:
+          type: string
+
+    UserStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [active, banned, pending]
+
+    ProviderVerifyInput:
+      type: object
+      required: [isVerified]
+      properties:
+        isVerified:
+          type: boolean
+        rejectionReason:
+          type: ["string", "null"]
+
+    ServiceStat:
+      type: object
+      required: [categoryName, icon, providerCount, requestCount]
+      properties:
+        categoryName:
+          type: string
+        icon:
+          type: string
+        providerCount:
+          type: integer
+        requestCount:
+          type: integer
+
+    # ── HOME FEED ───────────────────────────────────────────────────────────────
+    HomeFeed:
+      type: object
+      required: [categories, nearbyProviders, topRatedProviders, mostRequestedProviders, recentRequests]
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Category"
+        nearbyProviders:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderSummary"
+        topRatedProviders:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderSummary"
+        mostRequestedProviders:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProviderSummary"
+        recentRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceRequest"
