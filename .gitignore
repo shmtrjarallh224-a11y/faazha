@@ -11,6 +11,12 @@ out-tsc
 # dependencies
 node_modules
 
+# Next.js build output
+.next
+
+# artifacts server (avoid rocket detection of standalone server)
+artifacts/api-server
+
 # IDEs and editors
 /.idea
 .project
