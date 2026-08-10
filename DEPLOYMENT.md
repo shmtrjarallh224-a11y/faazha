@@ -13,3 +13,5 @@
 2. خطوات محلية لاختبار:
    - docker build -t faazha:latest .
    - docker run -p 3000:3000 faazha:latest
+
+ملاحظة: أضفت أيضاً استثناء (artifacts/api-server) في .gitignore لمنع اكتشاف Rocket للتطبيق الخادمي standalone داخل المستودع. إذا كنت تريد إبقاء الـ backend ضمن نفس الريبو للنشر، فالأفضل فصله في مستودع منفصل أو تحويله إلى API routes داخل Next.js.
