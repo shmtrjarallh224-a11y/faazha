@@ -115,7 +115,7 @@ export default function Welcome() {
                   transition={{ delay: 0.2 }}
                   className="text-3xl font-extrabold text-white mb-2"
                 >
-                  سند
+                  فزعة
                 </motion.h1>
                 <motion.p
                   initial={{ y: 20, opacity: 0 }}
@@ -155,7 +155,7 @@ export default function Welcome() {
                 transition={{ delay: 0.5 }}
                 className="text-center font-bold text-lg text-foreground"
               >
-                كيف تريد استخدام سند؟
+                  كيف تريد استخدام فزعة؟
               </motion.p>
 
               {/* Client card */}
