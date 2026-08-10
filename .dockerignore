@@ -1,0 +1,12 @@
+node_modules
+.pnpm-store
+dist
+.out
+.next/cache
+.vscode
+.git
+pnpm-workspace.yaml
+pnpm-lock.yaml
+.env
+.env.local
+.DS_Store
