@@ -1,3 +1,5 @@
+import '../styles/globals.css';
+
 export const metadata = {
   title: 'Faazha',
   description: 'Faazha web app',
@@ -5,7 +7,7 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar">
+    <html lang="ar" dir="rtl">
       <body>
         {children}
       </body>
